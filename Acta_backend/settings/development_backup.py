@@ -11,11 +11,15 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 # Allowed hosts
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
-# Database - Using SQLite for development
+# Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='acta_dev'),
+        'USER': config('DB_USER', default='acta_user'),
+        'PASSWORD': config('DB_PASSWORD', default='password'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -29,13 +33,6 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Simple cache for development (no Redis required)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-    }
-}
-
 # Django Debug Toolbar (optional)
 if DEBUG:
     INTERNAL_IPS = [
@@ -43,4 +40,6 @@ if DEBUG:
         'localhost',
     ]
 
-# Development specific logging would go here when needed
+# Development specific logging
+LOGGING['root']['level'] = 'DEBUG'
+LOGGING['loggers']['acta']['level'] = 'DEBUG'
