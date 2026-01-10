@@ -440,14 +440,16 @@ class TestProfileModel:
     """Tests for Profile model."""
 
     def test_profile_creation(self, user):
-        """Test profile creation."""
-        profile = Profile.objects.create(
-            user=user,
-            bio='Test bio',
-            phone_number='+1234567890',
-            location='Test City',
-            timezone='UTC'
-        )
+        """Test profile creation and auto-creation via signals."""
+        # Profile should be auto-created via signal
+        profile = user.profile
+
+        # Update the profile with test data
+        profile.bio = 'Test bio'
+        profile.phone_number = '+1234567890'
+        profile.location = 'Test City'
+        profile.timezone = 'UTC'
+        profile.save()
 
         assert profile.user == user
         assert profile.bio == 'Test bio'
@@ -492,13 +494,16 @@ class TestUserRoleModel:
     """Tests for UserRole model."""
 
     def test_role_creation(self, user):
-        """Test user role creation."""
-        role = UserRole.objects.create(
-            user=user,
-            role=UserRole.RoleType.ADMIN
-        )
-
+        """Test user role creation and auto-creation via signals."""
+        # Role should be auto-created via signal as MEMBER
+        role = UserRole.objects.get(user=user)
         assert role.user == user
+        assert role.role == UserRole.RoleType.MEMBER
+
+        # Update role to ADMIN
+        role.role = UserRole.RoleType.ADMIN
+        role.save()
+
         assert role.role == UserRole.RoleType.ADMIN
 
     def test_role_auto_creation_signal(self):
@@ -517,22 +522,22 @@ class TestUserRoleModel:
 
     def test_role_str(self, user):
         """Test user role string representation."""
-        role = UserRole.objects.create(
-            user=user,
-            role=UserRole.RoleType.ADMIN
-        )
+        # Get the auto-created role and update it
+        role = UserRole.objects.get(user=user)
+        role.role = UserRole.RoleType.ADMIN
+        role.save()
 
         expected_str = f"{user.email} - Admin"
         assert str(role) == expected_str
 
     def test_role_permissions(self, user):
         """Test role permissions JSON field."""
+        # Get the auto-created role and update it
+        role = UserRole.objects.get(user=user)
         permissions = ['can_create_tasks', 'can_delete_tasks']
-        role = UserRole.objects.create(
-            user=user,
-            role=UserRole.RoleType.ADMIN,
-            permissions=permissions
-        )
+        role.role = UserRole.RoleType.ADMIN
+        role.permissions = permissions
+        role.save()
 
         assert role.permissions == permissions
 

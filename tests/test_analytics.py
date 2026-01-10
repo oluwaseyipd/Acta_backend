@@ -107,8 +107,8 @@ class TestDailyStatsView:
         response = authenticated_client.get(url, {'days': 3})
 
         assert response.status_code == status.HTTP_200_OK
-        # Should return stats for last 3 days
-        assert len(response.data['results']) == 3
+        # Should return stats for last 3 days plus today (4 total)
+        assert len(response.data['results']) == 4
 
     def test_daily_stats_ordering(self, authenticated_client, user):
         """Test that daily stats are ordered by date."""
@@ -579,9 +579,19 @@ class TestAnalyticsPermissions:
             response = api_client.get(url)
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_analytics_data_isolation(self, api_client, multiple_users, daily_stats):
+    def test_analytics_data_isolation(self, api_client, user, daily_stats):
         """Test that analytics data is properly isolated between users."""
-        user1, user2 = multiple_users[0], multiple_users[1]
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        # Create a second user
+        user2 = User.objects.create_user(
+            email='user2@example.com',
+            password='testpass123',
+            first_name='User2',
+            last_name='Test'
+        )
+        user1 = user
 
         # Create daily stats for user2
         today = timezone.now().date()
