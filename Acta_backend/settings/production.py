@@ -4,6 +4,10 @@ Production settings for Acta_backend project.
 
 from .base import *
 from decouple import config
+import os
+
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or exit("Error: SECRET_KEY not found")
+
 
 # Debug
 DEBUG = False
@@ -45,6 +49,31 @@ CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=lambda v: [s.strip() 
 CORS_ALLOW_CREDENTIALS = True
 
 # Logging for production
-LOGGING['handlers']['file']['filename'] = '/var/log/acta/django.log'
-LOGGING['root']['level'] = 'WARNING'
-LOGGING['loggers']['acta']['level'] = 'INFO'
+# Logging for production
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
