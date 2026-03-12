@@ -97,16 +97,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Use this updated format for Django 4.2+
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        "OPTIONS": {
-            "manifest_strict": False,
-        },
     },
 }
 
