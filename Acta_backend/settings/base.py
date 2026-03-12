@@ -104,6 +104,9 @@ STORAGES = {
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "OPTIONS": {
+            "manifest_strict": False,
+        },
     },
 }
 
@@ -177,7 +180,3 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
-
-
-# Add this setting below your STORAGES dictionary
-WHITENOISE_MANIFEST_STRICT = False
