@@ -18,6 +18,20 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_task_count(self, obj):
         return obj.tasks.count()
+    
+    def validate(self, data):
+        """
+        Manually check unique_together since 'user' isn't in the form data.
+        This turns that 500 error into a 400 Bad Request.
+        """
+        user = self.context['request'].user
+        name = data.get('name')
+
+        if Category.objects.filter(user=user, name__iexact=name).exists():
+            raise serializers.ValidationError({
+                "name": "You already have a category with this name."
+            })
+        return data
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
