@@ -85,7 +85,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'id', 'title', 'priority', 'status',
+            'id', 'title', 'description', 'priority', 'status',
             'due_date', 'start_date', 'category', 'category_name', 'category_color',
             'is_overdue', 'is_due_today', 'created_at'
         ]
