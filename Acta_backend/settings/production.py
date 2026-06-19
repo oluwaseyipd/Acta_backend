@@ -18,18 +18,11 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=lambda v: [s.strip() fo
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT', default='5432'),
-        'CONN_MAX_AGE': 600,
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
-    }
+    'default': dj_database_url.config(
+        default=config('DB_URL'),
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
 
 # Security Settings
@@ -48,15 +41,6 @@ CSRF_COOKIE_SECURE = True
 # CORS Settings for production
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=lambda v: [s.strip() for s in v.split(',')])
 CORS_ALLOW_CREDENTIALS = True
-
-
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DB_URL'),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
 
 # Logging for production
 # Logging for production
