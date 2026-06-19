@@ -735,3 +735,138 @@ class TestProfilePermissions:
         assert response.status_code == status.HTTP_200_OK
         # The response should contain user1's data, not user2's
         assert response.data['email'] == user1.email
+
+
+@pytest.mark.django_db
+class TestGoogleAuth:
+    """Tests for Google OAuth2 authentication."""
+
+    def test_google_auth_url_success(self, api_client):
+        """Test getting Google OAuth2 authorization URL."""
+        url = reverse('google_auth_url')
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert 'url' in response.data
+        assert 'accounts.google.com' in response.data['url']
+        assert 'client_id' in response.data['url']
+
+    def test_google_auth_callback_missing_code(self, api_client):
+        """Test callback rejects request missing code."""
+        url = reverse('google_auth_callback')
+        response = api_client.post(url, {})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'code' in response.data['detail'].lower() or 'code' in response.data
+
+    def test_google_auth_callback_new_user(self, api_client):
+        """Test callback successfully registers a new user with Google account."""
+        from unittest.mock import patch, MagicMock
+        
+        url = reverse('google_auth_callback')
+        data = {'code': 'valid_auth_code_xyz'}
+
+        # Mock token exchange response from Google
+        mock_token_response = MagicMock()
+        mock_token_response.ok = True
+        mock_token_response.json.return_value = {
+            'id_token': 'fake_id_token_string'
+        }
+
+        # Mock token info response from Google
+        mock_info_response = MagicMock()
+        mock_info_response.ok = True
+        mock_info_response.json.return_value = {
+            'iss': 'https://accounts.google.com',
+            'aud': '', # settings.GOOGLE_CLIENT_ID will be empty by default in tests
+            'email': 'newgoogleuser@example.com',
+            'given_name': 'Google',
+            'family_name': 'User'
+        }
+
+        # Mock setting.GOOGLE_CLIENT_ID to match the mock
+        with patch('django.conf.settings.GOOGLE_CLIENT_ID', ''):
+            with patch('requests.post', return_value=mock_token_response) as mock_post:
+                with patch('requests.get', return_value=mock_info_response) as mock_get:
+                    with patch('accounts.tasks.send_welcome_email.delay') as mock_email_delay:
+                        with patch('django.db.transaction.on_commit', side_effect=lambda f: f()):
+                            response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['registered'] is True
+        assert response.data['is_new'] is True
+        assert 'access' in response.data
+        assert 'refresh' in response.data
+        assert response.data['user']['email'] == 'newgoogleuser@example.com'
+
+        # Verify database entities created
+        new_user = User.objects.get(email='newgoogleuser@example.com')
+        assert new_user.first_name == 'Google'
+        assert new_user.last_name == 'User'
+        
+        # Signal side-effects: profile, role, and categories
+        assert hasattr(new_user, 'profile')
+        assert UserRole.objects.filter(user=new_user, role=UserRole.RoleType.MEMBER).exists()
+        from tasks.models import Category
+        assert Category.objects.filter(user=new_user).count() == 5
+
+        # Email task trigger
+        mock_email_delay.assert_called_once_with(str(new_user.id))
+
+    def test_google_auth_callback_existing_user(self, api_client, user):
+        """Test callback successfully logs in an existing user."""
+        from unittest.mock import patch, MagicMock
+        
+        url = reverse('google_auth_callback')
+        data = {'code': 'valid_auth_code_existing'}
+
+        # Mock token exchange response from Google
+        mock_token_response = MagicMock()
+        mock_token_response.ok = True
+        mock_token_response.json.return_value = {
+            'id_token': 'fake_id_token_string'
+        }
+
+        # Mock token info response from Google
+        mock_info_response = MagicMock()
+        mock_info_response.ok = True
+        mock_info_response.json.return_value = {
+            'iss': 'https://accounts.google.com',
+            'aud': '',
+            'email': user.email, # Match existing user email
+            'given_name': user.first_name,
+            'family_name': user.last_name
+        }
+
+        with patch('django.conf.settings.GOOGLE_CLIENT_ID', ''):
+            with patch('requests.post', return_value=mock_token_response):
+                with patch('requests.get', return_value=mock_info_response):
+                    with patch('accounts.tasks.send_welcome_email.delay') as mock_email_delay:
+                        response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['registered'] is True
+        assert response.data['is_new'] is False
+        assert 'access' in response.data
+        assert 'refresh' in response.data
+        assert response.data['user']['email'] == user.email
+
+        # Welcome email should NOT be sent for existing user login
+        mock_email_delay.assert_not_called()
+
+    def test_google_auth_callback_invalid_token(self, api_client):
+        """Test callback handles invalid tokens from Google gracefully."""
+        from unittest.mock import patch, MagicMock
+        
+        url = reverse('google_auth_callback')
+        data = {'code': 'invalid_code'}
+
+        # Mock token exchange failure
+        mock_token_response = MagicMock()
+        mock_token_response.ok = False
+        mock_token_response.text = 'Invalid authorization code'
+
+        with patch('requests.post', return_value=mock_token_response):
+            response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'Failed to exchange Google authorization code' in response.data['detail']
+

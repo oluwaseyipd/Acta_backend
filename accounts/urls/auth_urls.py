@@ -8,6 +8,8 @@ from accounts.views import (
     ChangePasswordView,
     PasswordResetRequestView,
     PasswordResetConfirmView,
+    GoogleAuthUrlView,
+    GoogleAuthCallbackView,
 )
 
 urlpatterns = [
@@ -18,4 +20,6 @@ urlpatterns = [
     path('password/change/', ChangePasswordView.as_view(), name='password_change'),
     path('password/reset/', PasswordResetRequestView.as_view(), name='password_reset'),
     path('password/reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('google/url/', GoogleAuthUrlView.as_view(), name='google_auth_url'),
+    path('google/callback/', GoogleAuthCallbackView.as_view(), name='google_auth_callback'),
 ]
