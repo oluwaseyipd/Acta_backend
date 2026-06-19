@@ -300,9 +300,14 @@ class TestCategoryStatsView:
         """Test getting category statistics."""
         from tasks.models import Task, Category
 
-        # Create categories
-        category1 = Category.objects.create(user=user, name='Work', color='#FF5733')
-        category2 = Category.objects.create(user=user, name='Personal', color='#33FF57')
+        # Retrieve automatically created categories
+        category1 = Category.objects.get(user=user, name='Work')
+        category1.color = '#FF5733'
+        category1.save()
+
+        category2 = Category.objects.get(user=user, name='Personal')
+        category2.color = '#33FF57'
+        category2.save()
 
         # Create tasks in categories
         Task.objects.create(user=user, title='Work Task 1', category=category1,
@@ -316,7 +321,7 @@ class TestCategoryStatsView:
         response = authenticated_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 2
+        assert len(response.data) == 5
 
         # Find work category stats
         work_stats = next((cat for cat in response.data if cat['category_name'] == 'Work'), None)
@@ -336,9 +341,10 @@ class TestCategoryStatsView:
         response = authenticated_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
+        assert len(response.data) == 6
 
-        category_stats = response.data[0]
+        category_stats = next((cat for cat in response.data if cat['category_name'] == 'Empty Category'), None)
+        assert category_stats is not None
         assert category_stats['total_tasks'] == 0
         assert category_stats['completed_tasks'] == 0
         assert category_stats['completion_rate'] == 0.0
@@ -362,8 +368,10 @@ class TestCategoryStatsView:
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        assert response.data[0]['category_name'] == 'User1 Category'
+        assert len(response.data) == 6
+        category_names = [cat['category_name'] for cat in response.data]
+        assert 'User1 Category' in category_names
+        assert 'User2 Category' not in category_names
 
 
 @pytest.mark.django_db

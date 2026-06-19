@@ -103,19 +103,44 @@ class ProductivityTrendView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, CanViewAnalytics]
 
     def get(self, request):
+        from django.db.models.functions import TruncDate
         days = int(request.query_params.get('days', 14))
         today = timezone.now().date()
+        start_date = today - timedelta(days=days - 1)
+
+        # Get created counts grouped by date
+        created_stats = (
+            Task.objects.filter(
+                user=request.user,
+                created_at__date__gte=start_date,
+                created_at__date__lte=today
+            )
+            .annotate(date=TruncDate('created_at'))
+            .values('date')
+            .annotate(count=Count('id'))
+        )
+
+        # Get completed counts grouped by date
+        completed_stats = (
+            Task.objects.filter(
+                user=request.user,
+                status=Task.Status.COMPLETED,
+                completed_at__date__gte=start_date,
+                completed_at__date__lte=today
+            )
+            .annotate(date=TruncDate('completed_at'))
+            .values('date')
+            .annotate(count=Count('id'))
+        )
+
+        created_map = {item['date']: item['count'] for item in created_stats if item['date']}
+        completed_map = {item['date']: item['count'] for item in completed_stats if item['date']}
 
         trends = []
         for i in range(days - 1, -1, -1):
             date = today - timedelta(days=i)
-            tasks = Task.objects.filter(user=request.user)
-
-            created_count = tasks.filter(created_at__date=date).count()
-            completed_count = tasks.filter(
-                status=Task.Status.COMPLETED,
-                completed_at__date=date
-            ).count()
+            created_count = created_map.get(date, 0)
+            completed_count = completed_map.get(date, 0)
 
             completion_rate = 0.0
             if created_count > 0:
