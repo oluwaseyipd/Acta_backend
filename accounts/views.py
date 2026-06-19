@@ -39,6 +39,14 @@ class RegisterView(generics.CreateAPIView):
         # Generate tokens
         refresh = RefreshToken.for_user(user)
 
+        # Trigger welcome email asynchronously
+        from django.db import transaction
+        from .tasks import send_welcome_email
+        try:
+            transaction.on_commit(lambda: send_welcome_email.delay(str(user.id)))
+        except Exception:
+            pass
+
         return Response({
             'user': UserSerializer(user).data,
             'tokens': {
@@ -111,9 +119,21 @@ class PasswordResetRequestView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # TODO: Send password reset email
-        # email = serializer.validated_data['email']
-        # send_password_reset_email(email)
+        email = serializer.validated_data['email']
+        user = User.objects.filter(email__iexact=email).first()
+        if user:
+            from django.contrib.auth.tokens import default_token_generator as password_reset_token_generator
+            from .models import PasswordResetToken
+            from .tasks import send_password_reset_email
+            from django.db import transaction
+
+            token = password_reset_token_generator.make_token(user)
+            PasswordResetToken.objects.create(user=user, token=token)
+            
+            try:
+                transaction.on_commit(lambda: send_password_reset_email.delay(str(user.id), token))
+            except Exception:
+                pass
 
         return Response({
             'message': 'If an account exists with this email, a reset link will be sent.'
@@ -130,7 +150,33 @@ class PasswordResetConfirmView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # TODO: Validate token and reset password
+        token = serializer.validated_data['token']
+        new_password = serializer.validated_data['new_password']
+
+        from django.contrib.auth.tokens import default_token_generator as password_reset_token_generator
+        from .models import PasswordResetToken
+        from .tasks import send_password_changed_email
+        from django.db import transaction
+
+        reset_record = PasswordResetToken.objects.filter(token=token, used=False).first()
+
+        if not reset_record:
+            return Response({"detail": "Invalid or expired reset token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if reset_record.is_expired() or not password_reset_token_generator.check_token(reset_record.user, token):
+            return Response({"detail": "Invalid or expired reset token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = reset_record.user
+        user.set_password(new_password)
+        user.save()
+
+        reset_record.used = True
+        reset_record.save()
+
+        try:
+            transaction.on_commit(lambda: send_password_changed_email.delay(str(user.id)))
+        except Exception:
+            pass
 
         return Response({'message': 'Password reset successful'})
 
