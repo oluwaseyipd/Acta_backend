@@ -30,14 +30,14 @@ class TaskFilter(django_filters.FilterSet):
 
     def filter_is_overdue(self, queryset, name, value):
         from django.utils import timezone
-        today = timezone.now().date()
+        now = timezone.now()
         if value:
             return queryset.filter(
-                due_date__lt=today,
+                due_date__lt=now,
                 status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
             )
         return queryset.exclude(
-            due_date__lt=today,
+            due_date__lt=now,
             status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
         )
 
@@ -45,5 +45,5 @@ class TaskFilter(django_filters.FilterSet):
         from django.utils import timezone
         today = timezone.now().date()
         if value:
-            return queryset.filter(due_date=today)
-        return queryset.exclude(due_date=today)
+            return queryset.filter(due_date__date=today)
+        return queryset.exclude(due_date__date=today)
