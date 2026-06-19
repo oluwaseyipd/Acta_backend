@@ -7,19 +7,19 @@ from decouple import config
 import os
 import dj_database_url
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or exit("Error: SECRET_KEY not found")
+SECRET_KEY = config('DJANGO_SECRET_KEY', default=config('SECRET_KEY', default='django-insecure-prod-fallback-key'))
 
 
 # Debug
 DEBUG = False
 
 # Allowed hosts
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,acta-backend-vcbr.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DB_URL'),
+        default=config('DATABASE_URL', default=config('DB_URL', default='')),
         conn_max_age=600,
         ssl_require=True
     )
@@ -39,7 +39,11 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
 # CORS Settings for production
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=lambda v: [s.strip() for s in v.split(',')])
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='https://acta-psi.vercel.app,http://localhost:3000',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 CORS_ALLOW_CREDENTIALS = True
 
 # Logging for production

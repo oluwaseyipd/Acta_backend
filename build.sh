@@ -10,6 +10,3 @@ python manage.py collectstatic --noinput
 
 # Run database migrations
 python manage.py migrate
-
-# Forces a clean static rebuild
-rm -rf staticfiles
