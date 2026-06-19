@@ -189,3 +189,152 @@ class CurrentUserView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class GoogleAuthUrlView(APIView):
+    """View to get the Google OAuth2 authorization URL."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        from django.conf import settings
+        import urllib.parse
+        
+        client_id = settings.GOOGLE_CLIENT_ID
+        redirect_uri = settings.GOOGLE_REDIRECT_URI
+        
+        params = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "openid email profile",
+            "access_type": "offline",
+            "prompt": "consent",
+        }
+        
+        url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+        return Response({"url": url})
+
+
+class GoogleAuthCallbackView(APIView):
+    """View to handle the Google OAuth2 callback code exchange and login/registration."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        from django.conf import settings
+        from django.db import transaction
+        from rest_framework_simplejwt.tokens import RefreshToken
+        import requests
+        
+        code = request.data.get("code")
+        if not code:
+            return Response(
+                {"detail": "Authorization code is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Exchange code for Google tokens
+        token_url = "https://oauth2.googleapis.com/token"
+        payload = {
+            "code": code,
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }
+        
+        try:
+            token_response = requests.post(token_url, data=payload, timeout=10)
+            if not token_response.ok:
+                return Response(
+                    {"detail": f"Failed to exchange Google authorization code: {token_response.text}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            tokens = token_response.json()
+            id_token_str = tokens.get("id_token")
+            if not id_token_str:
+                return Response(
+                    {"detail": "Google did not return an ID token."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except requests.RequestException as e:
+            return Response(
+                {"detail": f"Network error connecting to Google: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+        # Verify Google ID token using Google API tokeninfo endpoint
+        try:
+            info_response = requests.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": id_token_str},
+                timeout=10
+            )
+            if not info_response.ok:
+                return Response(
+                    {"detail": f"Failed to verify ID token: {info_response.text}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            id_info = info_response.json()
+            
+            # Basic issuer validation
+            if id_info.get("iss") not in ["accounts.google.com", "https://accounts.google.com"]:
+                return Response(
+                    {"detail": "Invalid issuer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Audience validation
+            if id_info.get("aud") != settings.GOOGLE_CLIENT_ID:
+                return Response(
+                    {"detail": "Audience mismatch."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except requests.RequestException as e:
+            return Response(
+                {"detail": f"Network error verifying ID token: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+        email = id_info.get("email")
+        if not email:
+            return Response(
+                {"detail": "Email is missing from Google account info."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        first_name = id_info.get("given_name", "")
+        last_name = id_info.get("family_name", "")
+
+        # Find or create user
+        user = User.objects.filter(email__iexact=email).first()
+        is_new_user = False
+
+        if not user:
+            is_new_user = True
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=None
+                )
+            
+            # Send welcome email on transaction commit
+            from .tasks import send_welcome_email
+            try:
+                transaction.on_commit(lambda: send_welcome_email.delay(str(user.id)))
+            except Exception:
+                pass
+
+        # Generate simplejwt tokens
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "registered": True,
+            "is_new": is_new_user,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": UserSerializer(user).data,
+            "message": "Google login successful"
+        }, status=status.HTTP_200_OK)
+

@@ -185,6 +185,12 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+GOOGLE_REDIRECT_URI = config('GOOGLE_REDIRECT_URI', default='')
+
+
 # File Upload Configuration
 FILE_UPLOAD_MAX_MEMORY_SIZE = config('MAX_UPLOAD_SIZE', default=5242880, cast=int)
 
