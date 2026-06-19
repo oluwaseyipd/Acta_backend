@@ -27,10 +27,14 @@ class CategorySerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         name = data.get('name')
 
-        if Category.objects.filter(user=user, name__iexact=name).exists():
-            raise serializers.ValidationError({
-                "name": "You already have a category with this name."
-            })
+        if name:
+            queryset = Category.objects.filter(user=user, name__iexact=name)
+            if self.instance:
+                queryset = queryset.exclude(id=self.instance.id)
+            if queryset.exists():
+                raise serializers.ValidationError({
+                    "name": "You already have a category with this name."
+                })
         return data
 
     def create(self, validated_data):

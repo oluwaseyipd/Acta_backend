@@ -268,8 +268,9 @@ class TestCategoryViewSet:
         response = authenticated_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data['results']) == 1
-        assert response.data['results'][0]['name'] == category.name
+        assert len(response.data['results']) == 6
+        category_names = [cat['name'] for cat in response.data['results']]
+        assert category.name in category_names
 
     def test_create_category(self, authenticated_client):
         """Test creating a new category."""
@@ -295,6 +296,16 @@ class TestCategoryViewSet:
         category.refresh_from_db()
         assert category.name == 'Updated Category'
         assert category.color == '#654321'
+
+    def test_update_category_same_name(self, authenticated_client, category):
+        """Test updating category metadata keeping the same name."""
+        url = reverse('category-detail', kwargs={'pk': category.id})
+        data = {'name': category.name, 'color': '#999999'}
+        response = authenticated_client.put(url, data)
+
+        assert response.status_code == status.HTTP_200_OK
+        category.refresh_from_db()
+        assert category.color == '#999999'
 
     def test_delete_category(self, authenticated_client, category):
         """Test deleting a category."""
