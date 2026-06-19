@@ -44,6 +44,25 @@ class TestUserRegistration:
         assert 'Work' in category_names
         assert 'Personal' in category_names
 
+    def test_register_user_triggers_email(self, api_client):
+        """Test user registration triggers welcome email task delay."""
+        from unittest.mock import patch
+        url = reverse('register')
+        data = {
+            'email': 'newuser_email_trigger@example.com',
+            'password': 'testpass123',
+            'password_confirm': 'testpass123',
+            'first_name': 'New',
+            'last_name': 'User'
+        }
+        with patch('accounts.tasks.send_welcome_email.delay') as mock_send:
+            with patch('django.db.transaction.on_commit', side_effect=lambda f: f()):
+                response = api_client.post(url, data)
+        
+        assert response.status_code == status.HTTP_201_CREATED
+        user = User.objects.get(email='newuser_email_trigger@example.com')
+        mock_send.assert_called_once_with(str(user.id))
+
     def test_register_user_password_mismatch(self, api_client):
         """Test registration with password mismatch."""
         url = reverse('register')
@@ -357,12 +376,24 @@ class TestPasswordReset:
 
     def test_password_reset_request(self, api_client, user):
         """Test password reset request."""
+        from unittest.mock import patch
+        from accounts.models import PasswordResetToken
+
         url = reverse('password_reset')
         data = {'email': user.email}
-        response = api_client.post(url, data)
+
+        with patch('accounts.tasks.send_password_reset_email.delay') as mock_send:
+            with patch('django.db.transaction.on_commit', side_effect=lambda f: f()):
+                response = api_client.post(url, data)
 
         assert response.status_code == status.HTTP_200_OK
         assert 'If an account exists' in response.data['message']
+
+        # Verify token was created
+        reset_token = PasswordResetToken.objects.filter(user=user).first()
+        assert reset_token is not None
+        assert reset_token.used is False
+        mock_send.assert_called_once_with(str(user.id), reset_token.token)
 
     def test_password_reset_nonexistent_email(self, api_client):
         """Test password reset with nonexistent email."""
@@ -381,6 +412,119 @@ class TestPasswordReset:
         response = api_client.post(url, data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_password_reset_confirm_success(self, api_client, user):
+        """Test successful password reset confirmation."""
+        from unittest.mock import patch
+        from django.contrib.auth.tokens import default_token_generator as password_reset_token_generator
+        from accounts.models import PasswordResetToken
+
+        # Generate a valid token
+        token = password_reset_token_generator.make_token(user)
+        reset_record = PasswordResetToken.objects.create(user=user, token=token)
+
+        url = reverse('password_reset_confirm')
+        data = {
+            'token': token,
+            'new_password': 'newsecurepassword123',
+            'new_password_confirm': 'newsecurepassword123'
+        }
+
+        with patch('accounts.tasks.send_password_changed_email.delay') as mock_send:
+            with patch('django.db.transaction.on_commit', side_effect=lambda f: f()):
+                response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['message'] == 'Password reset successful'
+
+        # Verify password is changed
+        user.refresh_from_db()
+        assert user.check_password('newsecurepassword123')
+
+        # Verify token is marked used
+        reset_record.refresh_from_db()
+        assert reset_record.used is True
+
+        # Verify email task was queued
+        mock_send.assert_called_once_with(str(user.id))
+
+    def test_password_reset_confirm_invalid_token(self, api_client, user):
+        """Test password reset confirmation with invalid token."""
+        url = reverse('password_reset_confirm')
+        data = {
+            'token': 'invalid-token-12345',
+            'new_password': 'newsecurepassword123',
+            'new_password_confirm': 'newsecurepassword123'
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'Invalid or expired reset token.' in response.data['detail']
+
+    def test_password_reset_confirm_expired_token(self, api_client, user):
+        """Test password reset confirmation with expired token."""
+        from django.contrib.auth.tokens import default_token_generator as password_reset_token_generator
+        from accounts.models import PasswordResetToken
+        from django.utils import timezone
+        from datetime import timedelta
+
+        token = password_reset_token_generator.make_token(user)
+        reset_record = PasswordResetToken.objects.create(user=user, token=token)
+        
+        # Backdate the created_at to expire it (TIMEOUT is typically 259200 seconds / 3 days)
+        expired_time = timezone.now() - timedelta(days=4)
+        PasswordResetToken.objects.filter(id=reset_record.id).update(created_at=expired_time)
+
+        url = reverse('password_reset_confirm')
+        data = {
+            'token': token,
+            'new_password': 'newsecurepassword123',
+            'new_password_confirm': 'newsecurepassword123'
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'Invalid or expired reset token.' in response.data['detail']
+
+
+@pytest.mark.django_db
+class TestEmailTasks:
+    """Tests for Celery email tasks."""
+
+    def test_send_welcome_email_task(self, user):
+        from unittest.mock import patch
+        from accounts.tasks import send_welcome_email
+
+        with patch('accounts.tasks.send_email') as mock_send_email:
+            send_welcome_email(str(user.id))
+            
+            mock_send_email.assert_called_once()
+            args, kwargs = mock_send_email.call_args
+            assert args[0] == "Welcome to Acta"
+            assert user.email in args[2]
+
+    def test_send_password_reset_email_task(self, user):
+        from unittest.mock import patch
+        from accounts.tasks import send_password_reset_email
+
+        with patch('accounts.tasks.send_email') as mock_send_email:
+            send_password_reset_email(str(user.id), 'fake-token-xyz')
+            
+            mock_send_email.assert_called_once()
+            args, kwargs = mock_send_email.call_args
+            assert args[0] == "Acta Password Reset"
+            assert user.email in args[2]
+            assert "fake-token-xyz" in args[1] or "fake-token-xyz" in kwargs.get('html_message', '')
+
+    def test_send_password_changed_email_task(self, user):
+        from unittest.mock import patch
+        from accounts.tasks import send_password_changed_email
+
+        with patch('accounts.tasks.send_email') as mock_send_email:
+            send_password_changed_email(str(user.id))
+            
+            mock_send_email.assert_called_once()
+            args, kwargs = mock_send_email.call_args
+            assert args[0] == "Your Acta password was changed"
+            assert user.email in args[2]
 
 
 @pytest.mark.django_db
