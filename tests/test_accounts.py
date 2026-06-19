@@ -36,6 +36,14 @@ class TestUserRegistration:
         assert user.first_name == 'New'
         assert user.last_name == 'User'
 
+        # Verify default categories were automatically created
+        from tasks.models import Category
+        user_categories = Category.objects.filter(user=user)
+        assert user_categories.count() == 5
+        category_names = [cat.name for cat in user_categories]
+        assert 'Work' in category_names
+        assert 'Personal' in category_names
+
     def test_register_user_password_mismatch(self, api_client):
         """Test registration with password mismatch."""
         url = reverse('register')
