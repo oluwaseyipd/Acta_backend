@@ -14,7 +14,12 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default=config('SECRET_KEY', default='d
 DEBUG = False
 
 # Allowed hosts
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,acta-backend-vcbr.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,acta-backend-vcbr.onrender.com,acta-backend-ajqf.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
+
+render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if render_hostname:
+    ALLOWED_HOSTS.append(render_hostname)
+
 
 # Database
 DATABASES = {
