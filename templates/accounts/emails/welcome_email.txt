@@ -1,0 +1,9 @@
+Hello {{ user.email }},
+
+Welcome to Acta! We're glad to have you on board.
+
+You can now manage your tasks, track productivity, and collaborate with ease.
+
+Visit {{ frontend_url }} to get started.
+
+— The Acta Team
