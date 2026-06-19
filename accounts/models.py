@@ -146,3 +146,22 @@ class UserRole(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.get_role_display()}"
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_reset_tokens")
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'accounts_password_reset_token'
+        ordering = ["-created_at"]
+        verbose_name = 'Password Reset Token'
+        verbose_name_plural = 'Password Reset Tokens'
+
+    def is_expired(self):
+        from django.conf import settings
+        from datetime import timedelta
+        timeout = getattr(settings, "PASSWORD_RESET_TIMEOUT", 259200)
+        return timezone.now() > self.created_at + timedelta(seconds=timeout)
