@@ -91,7 +91,7 @@ class TaskAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'assigned_to', 'category', 'parent_task')
 
-    actions = ['mark_completed', 'mark_pending', 'mark_in_progress']
+    actions = ['mark_completed', 'mark_todo', 'mark_in_progress']
 
     def mark_completed(self, request, queryset):
         """Mark selected tasks as completed."""
@@ -100,11 +100,11 @@ class TaskAdmin(admin.ModelAdmin):
         self.message_user(request, f'{updated} tasks marked as completed.')
     mark_completed.short_description = "Mark selected tasks as completed"
 
-    def mark_pending(self, request, queryset):
-        """Mark selected tasks as pending."""
-        updated = queryset.update(status=Task.Status.PENDING, completed_at=None)
-        self.message_user(request, f'{updated} tasks marked as pending.')
-    mark_pending.short_description = "Mark selected tasks as pending"
+    def mark_todo(self, request, queryset):
+        """Mark selected tasks as todo."""
+        updated = queryset.update(status=Task.Status.TODO, completed_at=None)
+        self.message_user(request, f'{updated} tasks marked as todo.')
+    mark_todo.short_description = "Mark selected tasks as todo"
 
     def mark_in_progress(self, request, queryset):
         """Mark selected tasks as in progress."""

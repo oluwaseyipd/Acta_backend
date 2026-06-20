@@ -34,11 +34,11 @@ class TaskFilter(django_filters.FilterSet):
         if value:
             return queryset.filter(
                 due_date__lt=now,
-                status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
+                status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS]
             )
         return queryset.exclude(
             due_date__lt=now,
-            status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
+            status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS]
         )
 
     def filter_is_due_today(self, queryset, name, value):

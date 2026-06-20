@@ -34,12 +34,12 @@ class OverviewStatsView(views.APIView):
         stats = {
             'total_tasks': tasks.count(),
             'completed_tasks': tasks.filter(status=Task.Status.COMPLETED).count(),
-            'pending_tasks': tasks.filter(status=Task.Status.PENDING).count(),
+            'pending_tasks': tasks.filter(status=Task.Status.TODO).count(),
             'in_progress_tasks': tasks.filter(status=Task.Status.IN_PROGRESS).count(),
             'cancelled_tasks': tasks.filter(status=Task.Status.CANCELLED).count(),
             'overdue_tasks': tasks.filter(
                 due_date__date__lt=today,
-                status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
+                status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS]
             ).count(),
             'due_today': tasks.filter(due_date__date=today).count(),
             'tasks_this_week': tasks.filter(created_at__date__gte=week_start).count(),
@@ -167,12 +167,12 @@ class CategoryStatsView(views.APIView):
         categories = Category.objects.filter(user=request.user).annotate(
             total_tasks=Count('tasks'),
             completed_tasks=Count('tasks', filter=Q(tasks__status=Task.Status.COMPLETED)),
-            pending_tasks=Count('tasks', filter=Q(tasks__status=Task.Status.PENDING)),
+            pending_tasks=Count('tasks', filter=Q(tasks__status=Task.Status.TODO)),
             overdue_tasks=Count(
                 'tasks',
                 filter=Q(
                     tasks__due_date__date__lt=timezone.now().date(),
-                    tasks__status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
+                    tasks__status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS]
                 )
             )
         )

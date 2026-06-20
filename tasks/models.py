@@ -47,7 +47,7 @@ class Task(models.Model):
         URGENT = 'urgent', 'Urgent'
 
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Pending'
+        TODO = 'todo', 'Todo'
         IN_PROGRESS = 'in_progress', 'In Progress'
         COMPLETED = 'completed', 'Completed'
         CANCELLED = 'cancelled', 'Cancelled'
@@ -58,7 +58,7 @@ class Task(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.PENDING
+        default=Status.TODO
     )
     priority = models.CharField(
         max_length=10,

@@ -80,7 +80,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         today = timezone.now().date()
         tasks = self.get_queryset().filter(
             due_date__date__lt=today,
-            status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
+            status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS]
         )
         serializer = TaskListSerializer(tasks, many=True)
         return Response(serializer.data)
@@ -104,7 +104,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         tasks = self.get_queryset().filter(
             due_date__date__gte=today,
             due_date__date__lte=next_week,
-            status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
+            status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS]
         ).order_by('due_date')
         serializer = TaskListSerializer(tasks, many=True)
         return Response(serializer.data)
@@ -127,7 +127,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
 
         if task.status == Task.Status.COMPLETED:
-            task.status = Task.Status.PENDING
+            task.status = Task.Status.TODO
             task.completed_at = None
         else:
             task.status = Task.Status.COMPLETED

@@ -64,7 +64,7 @@ class TestOverviewStatsView:
         # Create tasks with different statuses
         Task.objects.create(user=user, title='Task 1', status=Task.Status.COMPLETED, category=category)
         Task.objects.create(user=user, title='Task 2', status=Task.Status.COMPLETED, category=category)
-        Task.objects.create(user=user, title='Task 3', status=Task.Status.PENDING, category=category)
+        Task.objects.create(user=user, title='Task 3', status=Task.Status.TODO, category=category)
         Task.objects.create(user=user, title='Task 4', status=Task.Status.IN_PROGRESS, category=category)
 
         url = reverse('overview_stats')
@@ -240,7 +240,7 @@ class TestProductivityTrendView:
                 title=f'Task {i}',
                 category=category,
                 created_at=date,
-                status=Task.Status.COMPLETED if i < 2 else Task.Status.PENDING,
+                status=Task.Status.COMPLETED if i < 2 else Task.Status.TODO,
                 completed_at=date if i < 2 else None
             )
 
@@ -278,7 +278,7 @@ class TestProductivityTrendView:
         Task.objects.create(user=user, title='Task 1', category=category,
                           created_at=today, status=Task.Status.COMPLETED, completed_at=today)
         Task.objects.create(user=user, title='Task 2', category=category,
-                          created_at=today, status=Task.Status.PENDING)
+                          created_at=today, status=Task.Status.TODO)
 
         url = reverse('productivity_trends')
         response = authenticated_client.get(url, {'days': 1})
@@ -313,7 +313,7 @@ class TestCategoryStatsView:
         Task.objects.create(user=user, title='Work Task 1', category=category1,
                           status=Task.Status.COMPLETED)
         Task.objects.create(user=user, title='Work Task 2', category=category1,
-                          status=Task.Status.PENDING)
+                          status=Task.Status.TODO)
         Task.objects.create(user=user, title='Personal Task 1', category=category2,
                           status=Task.Status.COMPLETED)
 

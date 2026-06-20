@@ -74,7 +74,7 @@ def task(user, category):
         title='Test Task',
         description='Test description',
         priority=Task.Priority.MEDIUM,
-        status=Task.Status.PENDING,
+        status=Task.Status.TODO,
         category=category,
         due_date=timezone.now() + timedelta(days=1)
     )
@@ -165,7 +165,7 @@ def multiple_tasks(user, category):
     from tasks.models import Task
     tasks = []
     priorities = [Task.Priority.LOW, Task.Priority.MEDIUM, Task.Priority.HIGH, Task.Priority.URGENT]
-    statuses = [Task.Status.PENDING, Task.Status.IN_PROGRESS, Task.Status.COMPLETED]
+    statuses = [Task.Status.TODO, Task.Status.IN_PROGRESS, Task.Status.COMPLETED]
 
     for i in range(10):
         task = Task.objects.create(

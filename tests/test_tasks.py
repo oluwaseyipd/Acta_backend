@@ -29,7 +29,7 @@ class TestTaskViewSet:
             'title': 'New Task',
             'description': 'Task description',
             'priority': 'high',
-            'status': 'pending',
+            'status': 'todo',
             'category': category.id
         }
         response = authenticated_client.post(url, data)
@@ -83,7 +83,7 @@ class TestTaskViewSet:
         response = authenticated_client.post(url)
         assert response.status_code == status.HTTP_200_OK
         task.refresh_from_db()
-        assert task.status == Task.Status.PENDING
+        assert task.status == Task.Status.TODO
         assert task.completed_at is None
 
     def test_update_status(self, authenticated_client, task):
@@ -104,7 +104,7 @@ class TestTaskViewSet:
             title='Today Task',
             due_date=timezone.now().replace(hour=12, minute=0),
             priority=Task.Priority.HIGH,
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         url = reverse('task-today')
@@ -141,7 +141,7 @@ class TestTaskViewSet:
             title='Upcoming Task',
             due_date=timezone.now() + timedelta(days=3),
             priority=Task.Priority.MEDIUM,
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         url = reverse('task-upcoming')
@@ -190,7 +190,7 @@ class TestTaskViewSet:
         url = reverse('task-list')
 
         # Filter by status
-        response = authenticated_client.get(url, {'status': 'pending'})
+        response = authenticated_client.get(url, {'status': 'todo'})
         assert response.status_code == status.HTTP_200_OK
 
         # Filter by priority
@@ -237,14 +237,14 @@ class TestTaskViewSet:
             user=user1,
             title='User 1 Task',
             priority=Task.Priority.HIGH,
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         Task.objects.create(
             user=user2,
             title='User 2 Task',
             priority=Task.Priority.HIGH,
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         # Authenticate as user1
@@ -390,7 +390,7 @@ class TestTaskModel:
             title='Test Task',
             description='Test description',
             priority=Task.Priority.HIGH,
-            status=Task.Status.PENDING,
+            status=Task.Status.TODO,
             category=category,
             due_date=timezone.now() + timedelta(days=1),
             estimated_hours=8.5
@@ -399,7 +399,7 @@ class TestTaskModel:
         assert task.user == user
         assert task.title == 'Test Task'
         assert task.priority == Task.Priority.HIGH
-        assert task.status == Task.Status.PENDING
+        assert task.status == Task.Status.TODO
         assert task.category == category
         assert task.estimated_hours == 8.5
 
@@ -414,7 +414,7 @@ class TestTaskModel:
             user=user,
             title='Overdue Task',
             due_date=timezone.now() - timedelta(days=1),
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         # Create future task
@@ -422,7 +422,7 @@ class TestTaskModel:
             user=user,
             title='Future Task',
             due_date=timezone.now() + timedelta(days=1),
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         # Create completed overdue task
@@ -443,14 +443,14 @@ class TestTaskModel:
             user=user,
             title='Today Task',
             due_date=timezone.now(),
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         tomorrow_task = Task.objects.create(
             user=user,
             title='Tomorrow Task',
             due_date=timezone.now() + timedelta(days=1),
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         assert today_task.is_due_today is True
@@ -461,7 +461,7 @@ class TestTaskModel:
         task = Task.objects.create(
             user=user,
             title='Test Task',
-            status=Task.Status.PENDING
+            status=Task.Status.TODO
         )
 
         assert task.completed_at is None
