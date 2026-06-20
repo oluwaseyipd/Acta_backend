@@ -11,7 +11,7 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default=config('SECRET_KEY', default='d
 
 
 # Debug
-DEBUG = False
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Allowed hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,acta-backend-vcbr.onrender.com,acta-backend-ajqf.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
@@ -22,11 +22,12 @@ if render_hostname:
 
 
 # Database
+ssl_require = config('DATABASE_SSL_REQUIRE', default=True, cast=bool)
 DATABASES = {
     'default': dj_database_url.config(
         default=config('DATABASE_URL', default=config('DB_URL', default='')),
         conn_max_age=600,
-        ssl_require=True
+        ssl_require=ssl_require
     )
 }
 
@@ -82,20 +83,37 @@ LOGGING = {
 }
 
 
-# Override the STORAGES defined in base.py
-STORAGES = {
-    "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.StaticFilesStorage",
-    },
-}
+# Configure S3-compatible storage (Cloudflare R2)
+USE_S3 = config("USE_S3", default="False") == "True"
 
-MEDIA_URL = '/media/'
+if USE_S3:
+    if 'storages' not in INSTALLED_APPS:
+        INSTALLED_APPS.append('storages')
+    
+    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="auto")
+    AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL")
+    AWS_S3_CUSTOM_DOMAIN = config("AWS_S3_CUSTOM_DOMAIN", default=None)
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = config("AWS_QUERYSTRING_AUTH", default="False") == "True"
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET')
-}
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.StaticFilesStorage",
+        },
+    }
+
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+    else:
+        # Construct endpoint url with bucket name
+        MEDIA_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/"
+else:
+    # Use default local settings if S3 is disabled in production
+    MEDIA_URL = '/media/'

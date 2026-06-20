@@ -23,8 +23,6 @@ DJANGO_APPS = [
 
     # Order exception
     
-    'cloudinary_storage',
-    'cloudinary',
     'django.contrib.staticfiles',
 ]
 
@@ -99,7 +97,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 STORAGES = {
     "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.StaticFilesStorage",

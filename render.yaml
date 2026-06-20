@@ -1,0 +1,62 @@
+databases:
+  - name: acta-db
+    plan: free
+    databaseName: acta
+    user: acta_admin
+
+services:
+  - type: redis
+    name: acta-redis
+    plan: free
+    ipAllowList: [] # Private/internal access only
+
+  - type: web
+    name: acta-backend
+    runtime: docker
+    plan: free
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: Acta_backend.settings.production
+      
+      # Database connection string from the database resource
+      - key: DATABASE_URL
+        fromDatabase:
+          name: acta-db
+          property: connectionString
+      - key: DATABASE_SSL_REQUIRE
+        value: "True"
+
+      # Redis and Celery connections linked directly to the redis service
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: acta-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: acta-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: acta-redis
+          property: connectionString
+
+      # Cloudflare R2 Configurations (to be set in the Render Dashboard)
+      - key: USE_S3
+        value: "True"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: AWS_S3_CUSTOM_DOMAIN
+        sync: false
+
+      # Generate a secure Django Secret Key automatically on deploy
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
