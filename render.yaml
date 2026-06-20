@@ -60,3 +60,12 @@ services:
       # Generate a secure Django Secret Key automatically on deploy
       - key: DJANGO_SECRET_KEY
         generateValue: true
+
+      # Google OAuth Configuration (to be set in the Render Dashboard)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+
