@@ -61,14 +61,18 @@ A modern, production-ready Django REST API backend for task management and produ
 
 - **Backend Framework**: Django 4.2+
 - **API Framework**: Django REST Framework
-- **Authentication**: Django REST Framework SimpleJWT
+- **Authentication**: Django REST Framework SimpleJWT & Google OAuth2
 - **Database**: SQLite (development) / PostgreSQL (production)
-- **Task Scheduling**: Django Management Commands
+- **Task Queue & Broker**: Celery & Redis
+- **Object Storage (Media)**: Cloudflare R2 (S3-compatible) via `django-storages[s3]`
+- **Process Manager**: Supervisor (`supervisord` to run Gunicorn + Celery in a single container)
 - **Static Files**: WhiteNoise
 - **CORS**: django-cors-headers
 - **Filtering**: django-filter
 - **Testing**: pytest, pytest-django
 - **Environment Management**: python-decouple
+- **Containerization**: Docker & Docker Compose
+- **Deployment Blueprint**: Render Blueprint (`render.yaml`)
 
 ## 📦 Installation
 
@@ -137,6 +141,24 @@ EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-password
+
+# Redis & Celery Settings
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# Object Storage Configuration (Cloudflare R2/S3 - Production)
+USE_S3=False
+AWS_ACCESS_KEY_ID=your-cloudflare-r2-access-key
+AWS_SECRET_ACCESS_KEY=your-cloudflare-r2-secret-key
+AWS_STORAGE_BUCKET_NAME=your-bucket-name
+AWS_S3_ENDPOINT_URL=https://<account_id>.r2.cloudflarestorage.com
+AWS_S3_CUSTOM_DOMAIN=media.yourdomain.com
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=https://your-frontend.com/auth/google/callback
 ```
 
 ### Settings Modules
@@ -672,47 +694,55 @@ python manage.py showmigrations
 
 ## 🚢 Deployment
 
-### Production Checklist
+### Local Container Deployment (Docker & Compose)
 
-- [ ] Set `DEBUG=False`
-- [ ] Update `SECRET_KEY` with secure value
-- [ ] Configure allowed hosts
-- [ ] Set up database (PostgreSQL recommended)
-- [ ] Configure email settings
-- [ ] Set up CORS correctly
-- [ ] Use environment-specific settings module
-- [ ] Run `collectstatic`
-- [ ] Set up SSL/TLS
-- [ ] Configure logging
+We provide a complete Docker configuration to run the application locally inside containerized environments:
 
-### Docker Deployment
+1. **Build and start the services:**
+   ```bash
+   docker-compose up --build -d
+   ```
+   This orchestrates three containers:
+   - `acta_postgres`: Running PostgreSQL 16 database.
+   - `acta_redis`: Running Redis 7 message broker/cache.
+   - `acta_web`: Running the Django application with `supervisord` executing Gunicorn and Celery background workers.
 
-A `Dockerfile` and `docker-compose.yml` can be added:
+2. **Run database migrations manually (if needed):**
+   The container runs migrations and collects static files automatically on startup via the `docker-entrypoint.sh` hook. If you need to run them manually:
+   ```bash
+   docker-compose exec web python manage.py migrate
+   ```
 
-```bash
-docker-compose up -d
-```
+3. **Stop the services:**
+   ```bash
+   docker-compose down
+   ```
+
+### Production Deployment via Render (Blueprint)
+
+This project has been pre-configured with a Render Blueprint [render.yaml](file:///d:/OVERSIGHT/Acta_backend/render.yaml) for instant cloud deployments:
+
+1. Push your code to your GitHub repository.
+2. Go to the **Render Dashboard** -> **New** -> **Blueprint**.
+3. Select this repository.
+4. Render will parse `render.yaml` and provision:
+   - A managed PostgreSQL database.
+   - An internal Redis cache.
+   - A Docker-based Web Service (builds the image, applies database migrations, collects static assets, and boots both Gunicorn and Celery workers inside supervisor).
+5. Provide the required S3/R2 and Google OAuth variables in Render's configuration prompts (or under the environment variables settings tab):
+   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_ENDPOINT_URL`
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+6. Click **Apply** and wait for deployment to complete.
 
 ### Environment-Specific Settings
 
+When running outside of Docker locally:
 ```bash
-# Development
+# Development (uses SQLite)
 export DJANGO_SETTINGS_MODULE=Acta_backend.settings.development
 
-# Production
+# Production (uses PostgreSQL and R2 S3 storage)
 export DJANGO_SETTINGS_MODULE=Acta_backend.settings.production
-```
-
-### WSGI Server
-
-Deploy with production WSGI server:
-
-```bash
-# Using Gunicorn
-gunicorn Acta_backend.wsgi:application --bind 0.0.0.0:8000
-
-# Using uWSGI
-uwsgi --http :8000 --wsgi-file Acta_backend/wsgi.py --master
 ```
 
 ## 📝 Contributing
