@@ -1,7 +1,13 @@
 # Acta - Production-Ready REST API Backend
 
-[Acta Frontend](https://github.com/oluwaseyipd/acta-frontend)
-
+<p align="center">
+  <a href="https://actaly.vercel.app" target="_blank">
+    <img src="https://img.shields.io/badge/Live%20Preview-1F883D?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Preview">
+  </a>
+  <a href="https://github.com/oluwaseyipd/acta-frontend" target="_blank">
+    <img src="https://img.shields.io/badge/Frontend%20Repository-3F85E2?style=for-the-badge&logo=github&logoColor=white" alt="Frontend Repository">
+  </a>
+</p>
 <p align="center">
   <img src="https://img.shields.io/badge/Django-4.2+-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django" />
   <img src="https://img.shields.io/badge/Django_REST-Framework-red?style=for-the-badge&logo=django&logoColor=white" alt="DRF" />
@@ -15,13 +21,13 @@
 
 ---
 
-## 🌊 Introduction
+## Introduction
 
 This repository contains the backend for **Acta**, a robust, scalable task management and analytics ecosystem. It is designed to act as a production-grade REST API, coordinating JWT sessions, Google Single Sign-On, async analytics computation via worker queues, and media storage serving.
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TD
@@ -35,7 +41,7 @@ graph TD
 
 ---
 
-## 🛠️ Core Engineering Features
+## Core Engineering Features
 
 The system is architected around security, speed, and asynchronous processing:
 
@@ -59,7 +65,7 @@ The system is architected around security, speed, and asynchronous processing:
 
 ---
 
-## 📡 API Endpoint Catalog
+## API Endpoint Catalog
 
 All routes are versioned and prefixed with `/api/v1/`.
 
@@ -83,7 +89,7 @@ All routes are versioned and prefixed with `/api/v1/`.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 acta-backend/
@@ -101,7 +107,7 @@ acta-backend/
 
 ---
 
-## 🧪 Setup & Installation
+## Setup & Installation
 
 ### Local Setup
 1. **Clone & Virtualenv:**
@@ -147,3 +153,7 @@ pytest --cov=.
 ## 📄 License
 
 Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+
+## Support
+
+Kindly leave a star ⭐ if you find this project useful. Thanks!💖
