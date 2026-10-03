@@ -40,7 +40,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = TaskFilter
     search_fields = ['title', 'description']
-    ordering_fields = ['created_at', 'due_date', 'priority', 'status']
+    ordering_fields = ['created_at', 'due_date', 'priority', 'status', 'completed_at']
     ordering = ['-created_at']
     permission_classes = [permissions.IsAuthenticated, IsTaskOwnerOrAssigned]
 
@@ -156,7 +156,10 @@ class TaskViewSet(viewsets.ModelViewSet):
         elif action == 'change_priority' and value:
             tasks.update(priority=value)
         elif action == 'change_status' and value:
-            tasks.update(status=value)
+            if value == Task.Status.COMPLETED:
+                tasks.update(status=value, completed_at=timezone.now())
+            else:
+                tasks.update(status=value, completed_at=None)
 
         return Response({'message': f'Bulk action "{action}" applied to {len(task_ids)} tasks'})
 

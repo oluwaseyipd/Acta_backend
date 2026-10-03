@@ -15,12 +15,17 @@ def handle_task_completion(sender, instance, **kwargs):
             old_task = Task.objects.get(pk=instance.pk)
             # Task just completed
             if old_task.status != Task.Status.COMPLETED and instance.status == Task.Status.COMPLETED:
-                instance.completed_at = timezone.now()
+                if not instance.completed_at:
+                    instance.completed_at = timezone.now()
             # Task uncompleted
             elif old_task.status == Task.Status.COMPLETED and instance.status != Task.Status.COMPLETED:
                 instance.completed_at = None
         except Task.DoesNotExist:
             pass
+    else:
+        # New task created directly with COMPLETED status
+        if instance.status == Task.Status.COMPLETED and not instance.completed_at:
+            instance.completed_at = timezone.now()
 
 
 @receiver(post_save, sender=Task)

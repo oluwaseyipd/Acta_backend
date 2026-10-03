@@ -48,11 +48,11 @@ class TaskAdmin(admin.ModelAdmin):
 
     list_display = [
         'title', 'user', 'status', 'priority', 'category',
-        'due_date', 'is_overdue_display', 'created_at'
+        'due_date', 'completed_at', 'is_overdue_display', 'created_at'
     ]
     list_filter = [
         'status', 'priority', 'category', 'is_recurring',
-        'created_at', 'due_date', 'user'
+        'created_at', 'due_date', 'completed_at', 'user'
     ]
     search_fields = ['title', 'description', 'user__email', 'tags']
     readonly_fields = ['created_at', 'updated_at', 'completed_at']
