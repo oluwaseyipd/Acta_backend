@@ -19,6 +19,9 @@ class TaskFilter(django_filters.FilterSet):
     due_date__lte = django_filters.DateFilter(field_name='due_date', lookup_expr='lte')
     created_at__gte = django_filters.DateFilter(field_name='created_at', lookup_expr='gte')
     created_at__lte = django_filters.DateFilter(field_name='created_at', lookup_expr='lte')
+    completed_at = django_filters.DateFilter()
+    completed_at__gte = django_filters.DateFilter(field_name='completed_at', lookup_expr='gte')
+    completed_at__lte = django_filters.DateFilter(field_name='completed_at', lookup_expr='lte')
 
     # Boolean filters
     is_overdue = django_filters.BooleanFilter(method='filter_is_overdue')
@@ -26,7 +29,7 @@ class TaskFilter(django_filters.FilterSet):
 
     class Meta:
         model = Task
-        fields = ['status', 'priority', 'category', 'due_date']
+        fields = ['status', 'priority', 'category', 'due_date', 'completed_at']
 
     def filter_is_overdue(self, queryset, name, value):
         from django.utils import timezone

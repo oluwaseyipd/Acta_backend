@@ -91,9 +91,9 @@ class TaskListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'priority', 'status',
             'due_date', 'start_date', 'category', 'category_name', 'category_color',
-            'is_overdue', 'is_due_today', 'created_at'
+            'is_overdue', 'is_due_today', 'completed_at', 'created_at'
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'completed_at', 'created_at']
 
 
 class TaskDetailSerializer(serializers.ModelSerializer):
@@ -152,7 +152,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'title', 'description', 'priority', 'status',
             'due_date', 'start_date', 'estimated_hours', 'actual_hours',
-            'tags', 'category', 'assigned_to',
+            'completed_at', 'tags', 'category', 'assigned_to',
             'is_recurring', 'recurrence_pattern'
         ]
 
