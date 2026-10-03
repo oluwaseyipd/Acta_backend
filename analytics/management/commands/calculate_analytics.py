@@ -100,7 +100,7 @@ class Command(BaseCommand):
             ).count()
             daily_stats.tasks_overdue = tasks.filter(
                 due_date__date__lt=calc_date,
-                status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS]
+                status__in=[Task.Status.TODO, Task.Status.IN_PROGRESS]
             ).count()
 
             # Calculate hours worked (if actual_hours are tracked)

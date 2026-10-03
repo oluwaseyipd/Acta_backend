@@ -21,6 +21,7 @@ class TestTaskViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) == 1
         assert response.data['results'][0]['title'] == task.title
+        assert 'completed_at' in response.data['results'][0]
 
     def test_create_task(self, authenticated_client, category):
         """Test creating a new task."""
@@ -95,6 +96,15 @@ class TestTaskViewSet:
         assert response.status_code == status.HTTP_200_OK
         task.refresh_from_db()
         assert task.status == Task.Status.IN_PROGRESS
+        assert task.completed_at is None
+
+        # Update status to completed
+        data = {'status': 'completed'}
+        response = authenticated_client.patch(url, data)
+        assert response.status_code == status.HTTP_200_OK
+        task.refresh_from_db()
+        assert task.status == Task.Status.COMPLETED
+        assert task.completed_at is not None
 
     def test_today_tasks(self, authenticated_client, user):
         """Test getting tasks due today."""
@@ -169,6 +179,7 @@ class TestTaskViewSet:
         for task_id in task_ids:
             task = Task.objects.get(id=task_id)
             assert task.status == Task.Status.COMPLETED
+            assert task.completed_at is not None
 
     def test_bulk_action_delete(self, authenticated_client, multiple_tasks):
         """Test bulk deletion of tasks."""
@@ -201,6 +212,11 @@ class TestTaskViewSet:
         response = authenticated_client.get(url, {'is_overdue': 'true'})
         assert response.status_code == status.HTTP_200_OK
 
+        # Filter by completed_at
+        today_str = timezone.now().date().isoformat()
+        response = authenticated_client.get(url, {'completed_at__gte': today_str})
+        assert response.status_code == status.HTTP_200_OK
+
     def test_task_search(self, authenticated_client, task):
         """Test task search functionality."""
         url = reverse('task-list')
@@ -215,6 +231,10 @@ class TestTaskViewSet:
 
         # Order by due_date
         response = authenticated_client.get(url, {'ordering': 'due_date'})
+        assert response.status_code == status.HTTP_200_OK
+
+        # Order by completed_at
+        response = authenticated_client.get(url, {'ordering': '-completed_at'})
         assert response.status_code == status.HTTP_200_OK
 
         # Order by priority descending
