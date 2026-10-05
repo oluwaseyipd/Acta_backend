@@ -47,10 +47,13 @@ CSRF_COOKIE_SECURE = True
 # CORS Settings for production
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='https://acta-psi.vercel.app,http://localhost:3000',
+    default='https://actaly.vercel.app,https://acta-psi.vercel.app,http://localhost:3000',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 CORS_ALLOW_CREDENTIALS = True
+
+# Frontend URL for password reset links and emails
+FRONTEND_URL = config('FRONTEND_URL', default='https://actaly.vercel.app')
 
 # Logging for production
 # Logging for production
@@ -116,4 +119,4 @@ if USE_S3:
         MEDIA_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/"
 else:
     # Use default local settings if S3 is disabled in production
-    MEDIA_URL = '/media/'
+    MEDIA_URL = '/media/'

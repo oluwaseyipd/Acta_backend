@@ -89,7 +89,8 @@ class WeeklyStatsView(generics.ListAPIView):
     def get_queryset(self):
         weeks = int(self.request.query_params.get('weeks', 12))
         today = timezone.now().date()
-        start_date = today - timedelta(weeks=weeks)
+        current_week_start = today - timedelta(days=today.weekday())
+        start_date = current_week_start - timedelta(weeks=max(0, weeks - 1))
 
         return WeeklyStats.objects.filter(
             user=self.request.user,

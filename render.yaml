@@ -69,3 +69,7 @@ services:
       - key: GOOGLE_REDIRECT_URI
         sync: false
 
+      # Frontend URL for emails and password reset links
+      - key: FRONTEND_URL
+        value: "https://actaly.vercel.app"
+

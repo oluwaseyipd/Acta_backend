@@ -526,6 +526,40 @@ class TestEmailTasks:
             assert args[0] == "Your Acta password was changed"
             assert user.email in args[2]
 
+    def test_build_password_reset_url(self, settings):
+        from accounts.email_service import build_password_reset_url
+
+        settings.FRONTEND_URL = "https://acta-psi.vercel.app"
+        url = build_password_reset_url("test-token-123")
+        assert url == "https://acta-psi.vercel.app/reset-password?token=test-token-123"
+
+        # Trailing slash handling
+        settings.FRONTEND_URL = "https://acta-psi.vercel.app/"
+        url_with_slash = build_password_reset_url("test-token-123")
+        assert url_with_slash == "https://acta-psi.vercel.app/reset-password?token=test-token-123"
+
+    def test_email_templates_use_first_name(self, user):
+        from accounts.email_service import (
+            build_welcome_message,
+            build_password_reset_message,
+            build_password_changed_message,
+        )
+
+        user.first_name = "Jane"
+
+        _, welcome_text, welcome_html = build_welcome_message(user)
+        assert "Hello Jane," in welcome_text
+        assert "Hello <strong style=\"color: #0f172a;\">Jane</strong>," in welcome_html
+
+        _, reset_text, reset_html = build_password_reset_message(user, "test-token")
+        assert "Hello Jane," in reset_text
+        assert "Hello <strong\n                  style=\"color: #0f172a;\">Jane</strong>," in reset_html or "Jane" in reset_html
+
+        _, changed_text, changed_html = build_password_changed_message(user)
+        assert "Hello Jane," in changed_text
+        assert "Hello <strong style=\"color: #0f172a;\">Jane</strong>," in changed_html
+
+
 
 @pytest.mark.django_db
 class TestUserModel:

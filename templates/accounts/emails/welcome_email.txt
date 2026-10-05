@@ -1,4 +1,4 @@
-Hello {{ user.email }},
+Hello {{ user.first_name|default:user.email }},
 
 Welcome to Acta! We're glad to have you on board.
 
